@@ -4,17 +4,46 @@ import { useAuth } from '@/components/AuthContext';
 import { useState } from 'react';
 
 export default function LoginPage() {
-    const { login } = useAuth();
+    const { login, loginWithEmail, signupWithEmail } = useAuth();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [mode, setMode] = useState('login'); // 'login' or 'signup'
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
 
-    const handleLogin = async () => {
+    const handleGoogleLogin = async () => {
         setLoading(true);
         setError('');
         try {
             await login();
         } catch (err) {
-            setError('Error al iniciar sesión con Google. Inténtalo de nuevo.');
+            setError('Error al iniciar sesión con Google.');
+            setLoading(false);
+        }
+    };
+
+    const handleEmailAuth = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        try {
+            if (mode === 'login') {
+                await loginWithEmail(email, password);
+            } else {
+                await signupWithEmail(email, password);
+            }
+        } catch (err) {
+            console.error(err);
+            if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+                setError('Email o contraseña incorrectos.');
+            } else if (err.code === 'auth/email-already-in-use') {
+                setError('Este email ya está registrado.');
+            } else if (err.code === 'auth/weak-password') {
+                setError('La contraseña debe tener al menos 6 caracteres.');
+            } else {
+                setError('Error en la autenticación. Inténtalo de nuevo.');
+            }
+        } finally {
             setLoading(false);
         }
     };
@@ -29,35 +58,98 @@ export default function LoginPage() {
                 </div>
             </div>
 
-            <div className="summary-card" style={{ maxWidth: '400px', width: '100%', textAlign: 'center', padding: '2.5rem' }}>
-                <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem' }}>Iniciar Sesión</h2>
-                <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '0.9rem' }}>
-                    Solo los usuarios autorizados por el administrador pueden acceder al sistema de monitoreo.
+            <div className="summary-card" style={{ maxWidth: '400px', width: '100%', padding: '2.5rem' }}>
+                <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', textAlign: 'center' }}>
+                    {mode === 'login' ? 'Iniciar Sesión' : 'Registrarse'}
+                </h2>
+
+                <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem', textAlign: 'center' }}>
+                    {mode === 'login'
+                        ? 'Solo los usuarios autorizados pueden acceder.'
+                        : 'Crea una cuenta para solicitar acceso.'}
                 </p>
 
                 {error && (
-                    <div style={{ color: 'var(--accent-red)', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
+                    <div style={{
+                        color: 'var(--accent-red)',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        padding: '10px',
+                        borderRadius: '6px',
+                        marginBottom: '1.5rem',
+                        fontSize: '0.85rem',
+                        textAlign: 'center'
+                    }}>
                         {error}
                     </div>
                 )}
 
+                <form onSubmit={handleEmailAuth} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div className="form-group">
+                        <label className="form-label">Email</label>
+                        <input
+                            type="email"
+                            className="form-input"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="tu@email.com"
+                            required
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Contraseña</label>
+                        <input
+                            type="password"
+                            className="form-input"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="••••••••"
+                            required
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={loading}
+                        style={{ width: '100%', marginTop: '0.5rem' }}
+                    >
+                        {loading ? <div className="loading-spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : (mode === 'login' ? 'Entrar' : 'Registrarse')}
+                    </button>
+                </form>
+
+                <div style={{ margin: '1.5rem 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>O</span>
+                    <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></div>
+                </div>
+
                 <button
-                    className="btn btn-primary"
-                    onClick={handleLogin}
+                    className="btn btn-ghost"
+                    onClick={handleGoogleLogin}
                     disabled={loading}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                    style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '10px',
+                        border: '1px solid var(--border-color)'
+                    }}
                 >
-                    {loading ? (
-                        <div className="loading-spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }}></div>
-                    ) : (
-                        <>
-                            <svg width="20" height="20" viewBox="0 0 24 24">
-                                <path fill="currentColor" d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C9.03,19.27 6.48,16.68 6.48,13.5C6.48,10.31 9.03,7.74 12.18,7.74C13.9,7.74 15.6,8.36 16.67,9.35L18.73,7.3C17.21,5.83 15.1,5 12.18,5C7.5,5 3.68,8.81 3.68,13.5C3.68,18.19 7.5,22 12.18,22C16.88,22 21.39,18.66 21.39,13.5C21.39,12.7 21.39,11.73 21.35,11.1Z" />
-                            </svg>
-                            Entrar con Google
-                        </>
-                    )}
+                    <svg width="20" height="20" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C9.03,19.27 6.48,16.68 6.48,13.5C6.48,10.31 9.03,7.74 12.18,7.74C13.9,7.74 15.6,8.36 16.67,9.35L18.73,7.3C17.21,5.83 15.1,5 12.18,5C7.5,5 3.68,8.81 3.68,13.5C3.68,18.19 7.5,22 12.18,22C16.88,22 21.39,18.66 21.39,13.5C21.39,12.7 21.39,11.73 21.35,11.1Z" />
+                    </svg>
+                    Google
                 </button>
+
+                <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+                    <button
+                        className="btn btn-text"
+                        onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+                        style={{ fontSize: '0.85rem', color: 'var(--accent-cyan)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                    >
+                        {mode === 'login' ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
+                    </button>
+                </div>
             </div>
 
             <p style={{ marginTop: '2rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
