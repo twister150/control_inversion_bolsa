@@ -102,26 +102,34 @@ export default function StockTable({ stocks, titulo = 'Activos', currency = 'USD
                                             onMouseEnter={() => stock.descripcion && setHoveredDescription(stock.ticker)}
                                             onMouseLeave={() => setHoveredDescription(null)}
                                             onClick={() => stock.descripcion && alert(`Motivo: ${stock.descripcion}`)}
+                                            title={stock.descripcion ? `Motivo: ${stock.descripcion}` : ''}
                                         >
                                             <span className="ticker-symbol">{stock.ticker}</span>
                                             <span className="ticker-name">{stock.nombre}</span>
 
-                                            {hoveredDescription === stock.ticker && (
+                                            {hoveredDescription === stock.ticker && stock.descripcion && (
                                                 <div style={{
                                                     position: 'absolute',
-                                                    top: '100%',
+                                                    bottom: '100%',
                                                     left: 0,
+                                                    marginBottom: '8px',
                                                     background: 'var(--bg-tertiary)',
                                                     border: '1px solid var(--accent-cyan)',
-                                                    padding: '8px 12px',
-                                                    borderRadius: '6px',
-                                                    zIndex: 100,
-                                                    width: '200px',
-                                                    fontSize: '0.75rem',
-                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                                                    pointerEvents: 'none'
+                                                    padding: '10px 14px',
+                                                    borderRadius: '8px',
+                                                    zIndex: 999,
+                                                    width: '240px',
+                                                    fontSize: '0.85rem',
+                                                    boxShadow: '0 8px 16px rgba(0,0,0,0.6)',
+                                                    pointerEvents: 'none',
+                                                    whiteSpace: 'normal',
+                                                    lineHeight: '1.4',
+                                                    color: 'var(--text-primary)'
                                                 }}>
-                                                    <strong>💡 Motivo:</strong> {stock.descripcion}
+                                                    <div style={{ color: 'var(--accent-cyan)', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                        💡 Motivo del Monitoreo
+                                                    </div>
+                                                    {stock.descripcion}
                                                 </div>
                                             )}
                                         </div>
