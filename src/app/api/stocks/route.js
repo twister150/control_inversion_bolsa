@@ -5,7 +5,7 @@
 import { NextResponse } from 'next/server';
 import { TODOS_LOS_TICKERS, INFO_EMPRESAS } from '@/lib/constants';
 import { obtenerDatosCompletos } from '@/lib/yahoo-finance';
-import { calcularTodosLosIndicadores, calcularSMA, calcularATH, caidaDesdeATH, desviacionSMA, convertirADatosSemanales } from '@/lib/indicators';
+import { calcularSMA, calcularATH, caidaDesdeATH, desviacionSMA } from '@/lib/indicators';
 import { evaluarAlertaA, evaluarAlertaB, determinarAccion, determinarTramo } from '@/lib/alerts';
 
 export const dynamic = 'force-dynamic';
@@ -28,7 +28,7 @@ export async function GET(request) {
         const allTickersToFetch = [...TODOS_LOS_TICKERS, ...customAssets];
 
         const resultados = await Promise.allSettled(
-            allTickersToFetch.map(async ({ ticker, estrategia, nombre: customNombre }) => {
+            allTickersToFetch.map(async ({ ticker, estrategia, nombre: customNombre, descripcion }) => {
                 try {
                     const datos = await obtenerDatosCompletos(ticker);
                     const info = INFO_EMPRESAS[ticker] || { nombre: customNombre || ticker, sector: '', divisa: 'USD' };
@@ -42,9 +42,8 @@ export async function GET(request) {
 
                     // Datos semanales para SMA200W y ATH
                     const preciosSemanales = datos.historicoCompleto.map(d => d.close);
-                    const datosSemanales = preciosSemanales; // historicoCompleto ya viene en semanal
-                    const sma200w = calcularSMA(datosSemanales, 200);
                     const ath = calcularATH(preciosSemanales);
+                    const sma200w = calcularSMA(preciosSemanales, 200);
 
                     // Desviaciones
                     const devSma200 = sma200 ? desviacionSMA(precioActual, sma200) : null;
@@ -64,7 +63,7 @@ export async function GET(request) {
                     let alerta = null;
                     if (estrategia === 'A') {
                         alerta = evaluarAlertaA(indicadores, ticker);
-                    } else {
+                    } else if (estrategia === 'B') {
                         alerta = evaluarAlertaB(indicadores, ticker);
                     }
 
@@ -81,6 +80,7 @@ export async function GET(request) {
                     return {
                         ticker,
                         estrategia,
+                        descripcion, // Preservamos la descripción del activo personalizado
                         nombre: info.nombre,
                         sector: info.sector,
                         divisa: datos.cotizacion.divisa || info.divisa,
@@ -102,6 +102,7 @@ export async function GET(request) {
                     return {
                         ticker,
                         estrategia,
+                        descripcion,
                         nombre: INFO_EMPRESAS[ticker]?.nombre || ticker,
                         error: error.message,
                     };
