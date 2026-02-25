@@ -11,20 +11,23 @@ const formatNum = (n, decimals = 2) => {
     return Number(n).toLocaleString('es-ES', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 };
 
-const EX_RATE = 0.95; // 1 USD = 0.95 EUR (Simulado)
-
-const convert = (val, from, to) => {
-    if (from === to) return val;
-    if (from === 'USD' && to === 'EUR') return val * EX_RATE;
-    if (from === 'EUR' && to === 'USD') return val / EX_RATE;
-    return val;
-};
-
-export default function Portfolio({ stocks, currency = 'USD' }) {
+export default function Portfolio({ stocks, currency = 'USD', exchangeRate = 0.95 }) {
     const { user } = useAuth();
     const [compras, setCompras] = useState([]);
     const [showForm, setShowForm] = useState(false);
     const [loading, setLoading] = useState(true);
+
+    const convert = (val, from, to) => {
+        if (!val) return 0;
+        const fromNorm = from?.toUpperCase() || 'USD';
+        const toNorm = to?.toUpperCase() || 'USD';
+        if (fromNorm === toNorm) return val;
+
+        // exchangeRate is USD per 1 EUR (e.g. 1.05)
+        if (fromNorm === 'USD' && toNorm === 'EUR') return val / exchangeRate;
+        if (fromNorm === 'EUR' && toNorm === 'USD') return val * exchangeRate;
+        return val;
+    };
 
     const loadData = useCallback(async () => {
         if (!user?.uid) return;

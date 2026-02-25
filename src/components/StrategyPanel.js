@@ -2,7 +2,7 @@
 
 import StockTable from './StockTable';
 
-export default function StrategyPanel({ estrategia, stocks, tipo, currency = 'USD' }) {
+export default function StrategyPanel({ estrategia, stocks, tipo, currency = 'USD', exchangeRate = 0.95 }) {
     if (!estrategia) return null;
 
     const alertasActivas = stocks.filter(s => s.alerta && s.alerta.tipo.startsWith('ALERT_'));

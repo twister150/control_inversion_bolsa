@@ -29,6 +29,8 @@ export default function Home() {
     const [customAssets, setCustomAssets] = useState([]);
     const [isAddAssetOpen, setIsAddAssetOpen] = useState(false);
     const [currency, setCurrency] = useState('USD'); // 'USD' or 'EUR'
+    const [exchangeRate, setExchangeRate] = useState(0.95); // Real-time EUR/USD
+    const [lastUpdated, setLastUpdated] = useState(null);
 
     const fetchData = useCallback(async (assetsToFetch) => {
         try {
@@ -241,6 +243,7 @@ export default function Home() {
                                     stocks={data.stocks.filter(s => s.estrategia === 'CUSTOM')}
                                     titulo="Mis Activos Personalizados"
                                     currency={currency}
+                                    exchangeRate={exchangeRate}
                                     onDelete={handleDeleteCustomAsset}
                                 />
                             ) : (
@@ -261,6 +264,7 @@ export default function Home() {
                                 stocks={data.stocks.filter(s => s.estrategia !== 'CUSTOM')}
                                 titulo="Estrategias A y B"
                                 currency={currency}
+                                exchangeRate={exchangeRate}
                             />
                         </>
                     )}
@@ -284,7 +288,7 @@ export default function Home() {
                     )}
 
                     {tab === 'portfolio' && (
-                        <Portfolio stocks={data.stocks} currency={currency} />
+                        <Portfolio stocks={data.stocks} currency={currency} exchangeRate={exchangeRate} />
                     )}
 
                     {tab === 'instrucciones' && (

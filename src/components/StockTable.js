@@ -15,15 +15,6 @@ const formatPct = (n) => {
     return `${sign}${Number(n).toFixed(2)}%`;
 };
 
-const EX_RATE = 0.95; // 1 USD = 0.95 EUR (Simulado)
-
-const convert = (val, from, to) => {
-    if (from === to) return val;
-    if (from === 'USD' && to === 'EUR') return val * EX_RATE;
-    if (from === 'EUR' && to === 'USD') return val / EX_RATE;
-    return val;
-};
-
 function getActionClass(accion) {
     switch (accion) {
         case 'COMPRAR': return 'action-comprar';
@@ -44,9 +35,20 @@ function getActionLabel(accion) {
     }
 }
 
-export default function StockTable({ stocks, titulo = 'Activos', currency = 'USD', onDelete = null }) {
+export default function StockTable({ stocks, titulo = 'Activos', currency = 'USD', exchangeRate = 1.05, onDelete = null }) {
     const [activeChart, setActiveChart] = useState(null);
     const [hoveredDescription, setHoveredDescription] = useState(null);
+
+    const convert = (val, from, to) => {
+        if (!val) return 0;
+        const fromNorm = from?.toUpperCase() || 'USD';
+        const toNorm = to?.toUpperCase() || 'USD';
+        if (fromNorm === toNorm) return val;
+
+        if (fromNorm === 'USD' && toNorm === 'EUR') return val / exchangeRate;
+        if (fromNorm === 'EUR' && toNorm === 'USD') return val * exchangeRate;
+        return val;
+    };
 
     if (!stocks || stocks.length === 0) {
         return (

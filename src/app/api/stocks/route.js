@@ -4,7 +4,7 @@
 
 import { NextResponse } from 'next/server';
 import { TODOS_LOS_TICKERS, INFO_EMPRESAS } from '@/lib/constants';
-import { obtenerDatosCompletos } from '@/lib/yahoo-finance';
+import { obtenerDatosCompletos, obtenerCotizacion } from '@/lib/yahoo-finance';
 import { calcularSMA, calcularATH, caidaDesdeATH, desviacionSMA } from '@/lib/indicators';
 import { evaluarAlertaA, evaluarAlertaB, determinarAccion, determinarTramo } from '@/lib/alerts';
 
@@ -25,6 +25,17 @@ export async function GET(request) {
     }
 
     try {
+        // Obtener tipo de cambio EUR/USD en tiempo real
+        let exchangeRate = 0.95; // Backup conservador
+        try {
+            const fxData = await obtenerCotizacion('EURUSD=X');
+            if (fxData && fxData.precio) {
+                exchangeRate = fxData.precio;
+            }
+        } catch (fxError) {
+            console.error('Error obteniendo tipo de cambio:', fxError);
+        }
+
         const allTickersToFetch = [...TODOS_LOS_TICKERS, ...customAssets];
 
         const resultados = await Promise.allSettled(
@@ -80,7 +91,7 @@ export async function GET(request) {
                     return {
                         ticker,
                         estrategia,
-                        descripcion, // Preservamos la descripción del activo personalizado
+                        descripcion,
                         nombre: info.nombre,
                         sector: info.sector,
                         divisa: datos.cotizacion.divisa || info.divisa,
@@ -122,6 +133,7 @@ export async function GET(request) {
         return NextResponse.json({
             stocks,
             alertasActivas,
+            exchangeRate, // Incluimos el tipo de cambio real EUR/USD
             ultimaActualizacion: new Date().toISOString(),
             totalActivos: stocks.length,
         });
