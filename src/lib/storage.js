@@ -83,6 +83,16 @@ export async function guardarCustomAsset(uid, asset) {
     }
 }
 
+export async function eliminarCustomAsset(uid, ticker) {
+    if (!uid || !ticker) return;
+    try {
+        await deleteDoc(doc(db, 'users', uid, 'custom_assets', ticker));
+    } catch (error) {
+        console.error("Error al eliminar custom asset:", error);
+        throw error;
+    }
+}
+
 // ── Tickers desactivados (Obsolescencia) ────────────────
 
 export async function obtenerDesactivados(uid) {

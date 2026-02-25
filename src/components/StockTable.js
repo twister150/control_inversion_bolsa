@@ -15,6 +15,15 @@ const formatPct = (n) => {
     return `${sign}${Number(n).toFixed(2)}%`;
 };
 
+const EX_RATE = 0.95; // 1 USD = 0.95 EUR (Simulado)
+
+const convert = (val, from, to) => {
+    if (from === to) return val;
+    if (from === 'USD' && to === 'EUR') return val * EX_RATE;
+    if (from === 'EUR' && to === 'USD') return val / EX_RATE;
+    return val;
+};
+
 function getActionClass(accion) {
     switch (accion) {
         case 'COMPRAR': return 'action-comprar';
@@ -35,8 +44,9 @@ function getActionLabel(accion) {
     }
 }
 
-export default function StockTable({ stocks, titulo = 'Activos' }) {
+export default function StockTable({ stocks, titulo = 'Activos', currency = 'USD', onDelete = null }) {
     const [activeChart, setActiveChart] = useState(null);
+    const [hoveredDescription, setHoveredDescription] = useState(null);
 
     if (!stocks || stocks.length === 0) {
         return (
@@ -86,16 +96,41 @@ export default function StockTable({ stocks, titulo = 'Activos' }) {
                                         <div className={`ticker-avatar estrategia-${stock.estrategia?.toLowerCase()}`}>
                                             {stock.ticker.slice(0, 2)}
                                         </div>
-                                        <div className="ticker-info">
+                                        <div
+                                            className="ticker-info"
+                                            style={{ cursor: stock.descripcion ? 'help' : 'default', position: 'relative' }}
+                                            onMouseEnter={() => stock.descripcion && setHoveredDescription(stock.ticker)}
+                                            onMouseLeave={() => setHoveredDescription(null)}
+                                            onClick={() => stock.descripcion && alert(`Motivo: ${stock.descripcion}`)}
+                                        >
                                             <span className="ticker-symbol">{stock.ticker}</span>
                                             <span className="ticker-name">{stock.nombre}</span>
+
+                                            {hoveredDescription === stock.ticker && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: '100%',
+                                                    left: 0,
+                                                    background: 'var(--bg-tertiary)',
+                                                    border: '1px solid var(--accent-cyan)',
+                                                    padding: '8px 12px',
+                                                    borderRadius: '6px',
+                                                    zIndex: 100,
+                                                    width: '200px',
+                                                    fontSize: '0.75rem',
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                                                    pointerEvents: 'none'
+                                                }}>
+                                                    <strong>💡 Motivo:</strong> {stock.descripcion}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </td>
 
                                 {/* Precio */}
                                 <td className="cell-price">
-                                    {stock.divisa === 'EUR' ? '€' : '$'}{formatNum(stock.precioActual)}
+                                    {currency === 'EUR' ? '€' : '$'}{formatNum(convert(stock.precioActual, stock.divisa, currency))}
                                 </td>
 
                                 {/* Cambio diario */}
@@ -105,7 +140,7 @@ export default function StockTable({ stocks, titulo = 'Activos' }) {
 
                                 {/* SMA 200 */}
                                 <td className="cell-indicator text-muted">
-                                    {stock.sma200 ? `${stock.divisa === 'EUR' ? '€' : '$'}${formatNum(stock.sma200)}` : '—'}
+                                    {stock.sma200 ? `${currency === 'EUR' ? '€' : '$'}${formatNum(convert(stock.sma200, stock.divisa, currency))}` : '—'}
                                 </td>
 
                                 {/* Desviación SMA */}
@@ -115,7 +150,7 @@ export default function StockTable({ stocks, titulo = 'Activos' }) {
 
                                 {/* ATH */}
                                 <td className="cell-indicator text-muted">
-                                    {stock.ath ? `${stock.divisa === 'EUR' ? '€' : '$'}${formatNum(stock.ath)}` : '—'}
+                                    {stock.ath ? `${currency === 'EUR' ? '€' : '$'}${formatNum(convert(stock.ath, stock.divisa, currency))}` : '—'}
                                 </td>
 
                                 {/* Caída desde ATH */}
@@ -156,9 +191,21 @@ export default function StockTable({ stocks, titulo = 'Activos' }) {
 
                                 {/* Acción */}
                                 <td>
-                                    <span className={`action-badge ${getActionClass(stock.accion)}`}>
-                                        {getActionLabel(stock.accion)}
-                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span className={`action-badge ${getActionClass(stock.accion)}`} style={{ flex: 1, textAlign: 'center' }}>
+                                            {getActionLabel(stock.accion)}
+                                        </span>
+                                        {onDelete && (
+                                            <button
+                                                className="btn btn-danger"
+                                                onClick={() => onDelete(stock.ticker)}
+                                                style={{ padding: '4px 8px', fontSize: '0.7rem' }}
+                                                title="Eliminar de seguimiento"
+                                            >
+                                                🗑️
+                                            </button>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}

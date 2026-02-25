@@ -11,7 +11,16 @@ const formatNum = (n, decimals = 2) => {
     return Number(n).toLocaleString('es-ES', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 };
 
-export default function Portfolio({ stocks }) {
+const EX_RATE = 0.95; // 1 USD = 0.95 EUR (Simulado)
+
+const convert = (val, from, to) => {
+    if (from === to) return val;
+    if (from === 'USD' && to === 'EUR') return val * EX_RATE;
+    if (from === 'EUR' && to === 'USD') return val / EX_RATE;
+    return val;
+};
+
+export default function Portfolio({ stocks, currency = 'USD' }) {
     const { user } = useAuth();
     const [compras, setCompras] = useState([]);
     const [showForm, setShowForm] = useState(false);
@@ -79,8 +88,8 @@ export default function Portfolio({ stocks }) {
 
     // Estadísticas agregadas
     const stats = useMemo(() => {
-        const totalInvertido = comprasEnriquecidas.reduce((sum, c) => sum + c.capitalInvertido, 0);
-        const valorTotal = comprasEnriquecidas.reduce((sum, c) => sum + c.valorActual, 0);
+        const totalInvertido = comprasEnriquecidas.reduce((sum, c) => sum + convert(c.capitalInvertido, c.divisa, currency), 0);
+        const valorTotal = comprasEnriquecidas.reduce((sum, c) => sum + convert(c.valorActual, c.divisa, currency), 0);
         const gananciaTotal = valorTotal - totalInvertido;
         const rendimientoTotal = totalInvertido > 0 ? (gananciaTotal / totalInvertido) * 100 : 0;
 
@@ -97,19 +106,19 @@ export default function Portfolio({ stocks }) {
                 <div className="stat-card highlight">
                     <div className="stat-label">Capital Invertido</div>
                     <div className="stat-value text-cyan">
-                        ${formatNum(stats.totalInvertido)}
+                        {currency === 'EUR' ? '€' : '$'}{formatNum(stats.totalInvertido)}
                     </div>
                 </div>
                 <div className="stat-card">
                     <div className="stat-label">Valor Actual</div>
                     <div className="stat-value" style={{ color: stats.gananciaTotal >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                        ${formatNum(stats.valorTotal)}
+                        {currency === 'EUR' ? '€' : '$'}{formatNum(stats.valorTotal)}
                     </div>
                 </div>
                 <div className="stat-card">
                     <div className="stat-label">P&L No Realizado</div>
                     <div className="stat-value" style={{ color: stats.gananciaTotal >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                        {stats.gananciaTotal >= 0 ? '+' : ''}{formatNum(stats.gananciaTotal)}
+                        {stats.gananciaTotal >= 0 ? '+' : ''}{currency === 'EUR' ? '€' : '$'}{formatNum(stats.gananciaTotal)}
                         <span style={{ fontSize: '0.8rem', marginLeft: 6, opacity: 0.8 }}>
                             ({stats.rendimientoTotal >= 0 ? '+' : ''}{stats.rendimientoTotal.toFixed(2)}%)
                         </span>
@@ -228,17 +237,17 @@ export default function Portfolio({ stocks }) {
                                             {new Date(c.fechaCompra).toLocaleDateString('es-ES')}
                                         </td>
                                         <td className="cell-price">
-                                            {c.divisa === 'EUR' ? '€' : '$'}{formatNum(c.precioCompra)}
+                                            {currency === 'EUR' ? '€' : '$'}{formatNum(convert(c.precioCompra, c.divisa, currency))}
                                         </td>
                                         <td style={{ fontFamily: 'var(--font-mono)' }}>{c.cantidad}</td>
                                         <td className="cell-price">
-                                            {c.divisa === 'EUR' ? '€' : '$'}{formatNum(c.capitalInvertido)}
+                                            {currency === 'EUR' ? '€' : '$'}{formatNum(convert(c.capitalInvertido, c.divisa, currency))}
                                         </td>
                                         <td className="cell-price">
-                                            {c.divisa === 'EUR' ? '€' : '$'}{formatNum(c.precioActual)}
+                                            {currency === 'EUR' ? '€' : '$'}{formatNum(convert(c.precioActual, c.divisa, currency))}
                                         </td>
                                         <td className="cell-price" style={{ color: c.ganancia >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                                            {c.divisa === 'EUR' ? '€' : '$'}{formatNum(c.valorActual)}
+                                            {currency === 'EUR' ? '€' : '$'}{formatNum(convert(c.valorActual, c.divisa, currency))}
                                         </td>
                                         <td>
                                             <span style={{

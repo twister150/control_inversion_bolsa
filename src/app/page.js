@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/components/AuthContext';
-import { obtenerCustomAssets, guardarCustomAsset, obtenerCompras } from '@/lib/storage';
+import { obtenerCustomAssets, guardarCustomAsset, obtenerCompras, eliminarCustomAsset } from '@/lib/storage';
 import StockTable from '@/components/StockTable';
 import AlertBanner from '@/components/AlertBanner';
 import StrategyPanel from '@/components/StrategyPanel';
@@ -28,6 +28,7 @@ export default function Home() {
     const [alertasDismissed, setAlertasDismissed] = useState([]);
     const [customAssets, setCustomAssets] = useState([]);
     const [isAddAssetOpen, setIsAddAssetOpen] = useState(false);
+    const [currency, setCurrency] = useState('USD'); // 'USD' or 'EUR'
 
     const fetchData = useCallback(async (assetsToFetch) => {
         try {
@@ -52,20 +53,8 @@ export default function Home() {
         if (!user?.uid) return;
 
         const savedCustom = await obtenerCustomAssets(user.uid);
-        const compras = await obtenerCompras(user.uid);
-
-        const allCustomMap = new Map();
-        savedCustom.forEach(c => allCustomMap.set(c.ticker, c));
-
-        compras.forEach(c => {
-            if (c.estrategia === 'CUSTOM' && !allCustomMap.has(c.ticker)) {
-                allCustomMap.set(c.ticker, { ticker: c.ticker, nombre: c.nombre || c.ticker, estrategia: 'CUSTOM' });
-            }
-        });
-
-        const combinedCustom = Array.from(allCustomMap.values());
-        setCustomAssets(combinedCustom);
-        fetchData(combinedCustom);
+        setCustomAssets(savedCustom);
+        fetchData(savedCustom);
     }, [user?.uid, fetchData]);
 
     useEffect(() => {
@@ -82,9 +71,16 @@ export default function Home() {
 
     const handleAddCustomAsset = async (asset) => {
         if (!user?.uid) return;
-
         await guardarCustomAsset(user.uid, asset);
         await loadCustomData();
+    };
+
+    const handleDeleteCustomAsset = async (ticker) => {
+        if (!user?.uid) return;
+        if (window.confirm(`¿Dejar de monitorear ${ticker}?`)) {
+            await eliminarCustomAsset(user.uid, ticker);
+            await loadCustomData();
+        }
     };
 
     const stocksA = data?.stocks?.filter(s => s.estrategia === 'A') || [];
@@ -118,6 +114,22 @@ export default function Home() {
                     </div>
                 </div>
                 <div className="header-meta">
+                    <div style={{ display: 'flex', background: 'var(--bg-tertiary)', borderRadius: '20px', padding: '2px' }}>
+                        <button
+                            className={`btn ${currency === 'USD' ? 'btn-primary' : 'btn-ghost'}`}
+                            onClick={() => setCurrency('USD')}
+                            style={{ padding: '4px 12px', fontSize: '0.7rem', borderRadius: '18px' }}
+                        >
+                            $ USD
+                        </button>
+                        <button
+                            className={`btn ${currency === 'EUR' ? 'btn-primary' : 'btn-ghost'}`}
+                            onClick={() => setCurrency('EUR')}
+                            style={{ padding: '4px 12px', fontSize: '0.7rem', borderRadius: '18px' }}
+                        >
+                            € EUR
+                        </button>
+                    </div>
                     <div className="header-status">
                         <span className="status-dot"></span>
                         {loading ? 'CARGANDO DATOS…' : 'MERCADO ACTIVO'}
@@ -211,19 +223,45 @@ export default function Home() {
                                 </div>
                             </div>
 
-                            {/* Tabla General */}
+                            {/* Activos Personalizados */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', marginTop: '2rem' }}>
                                 <h2 className="table-title" style={{ margin: 0 }}>
-                                    📊 Todos los Activos
+                                    🎯 Mis Activos
                                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400, marginLeft: 8 }}>
-                                        ({data.stocks.length} activos)
+                                        ({customAssets.length} añadidos)
                                     </span>
                                 </h2>
                                 <button className="btn btn-primary" onClick={() => setIsAddAssetOpen(true)}>
                                     ➕ Añadir Activo
                                 </button>
                             </div>
-                            <StockTable stocks={data.stocks} titulo="Todos los Activos" />
+
+                            {customAssets.length > 0 ? (
+                                <StockTable
+                                    stocks={data.stocks.filter(s => s.estrategia === 'CUSTOM')}
+                                    titulo="Mis Activos Personalizados"
+                                    currency={currency}
+                                    onDelete={handleDeleteCustomAsset}
+                                />
+                            ) : (
+                                <div className="summary-card" style={{ textAlign: 'center', padding: '2rem', border: '1px dashed var(--border-color)', background: 'transparent' }}>
+                                    <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>No tienes activos personalizados en seguimiento.</p>
+                                    <button className="btn btn-ghost" onClick={() => setIsAddAssetOpen(true)}>Añadir mi primer activo</button>
+                                </div>
+                            )}
+
+                            {/* Tabla Estrategias */}
+                            <h2 className="table-title" style={{ marginTop: '3rem', marginBottom: '1rem' }}>
+                                📊 Estrategias Maestras
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400, marginLeft: 8 }}>
+                                    ({stocksA.length + stocksB.length} activos)
+                                </span>
+                            </h2>
+                            <StockTable
+                                stocks={data.stocks.filter(s => s.estrategia !== 'CUSTOM')}
+                                titulo="Estrategias A y B"
+                                currency={currency}
+                            />
                         </>
                     )}
 
@@ -232,6 +270,7 @@ export default function Home() {
                             estrategia={ESTRATEGIA_A}
                             stocks={stocksA}
                             tipo="A"
+                            currency={currency}
                         />
                     )}
 
@@ -240,11 +279,12 @@ export default function Home() {
                             estrategia={ESTRATEGIA_B}
                             stocks={stocksB}
                             tipo="B"
+                            currency={currency}
                         />
                     )}
 
                     {tab === 'portfolio' && (
-                        <Portfolio stocks={data.stocks} />
+                        <Portfolio stocks={data.stocks} currency={currency} />
                     )}
 
                     {tab === 'instrucciones' && (
